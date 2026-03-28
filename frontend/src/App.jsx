@@ -16,6 +16,12 @@ export default function App() {
   const [tabs, setTabs] = useState([]);
   const [activeTabId, setActiveTabId] = useState('home');
 
+  // Open mode: 'embed' = in-app iframe tabs, 'new-tab' = browser tab
+  const [openMode, setOpenMode] = useState('embed');
+  const toggleOpenMode = useCallback(() => {
+    setOpenMode((prev) => (prev === 'embed' ? 'new-tab' : 'embed'));
+  }, []);
+
   const fetchContainers = useCallback(async () => {
     setLoading(true);
     try {
@@ -83,6 +89,8 @@ export default function App() {
         lastUpdated={lastUpdated}
         onRefresh={fetchContainers}
         loading={loading}
+        openMode={openMode}
+        onToggleOpenMode={toggleOpenMode}
       />
 
       <TabBar
@@ -126,14 +134,14 @@ export default function App() {
               </h2>
               <div className="cards-grid">
                 {groups[groupKey].map((service) => (
-                  <ServiceCard key={service.id} service={service} onOpen={openTab} />
+                  <ServiceCard key={service.id} service={service} onOpen={openTab} openMode={openMode} />
                 ))}
               </div>
             </section>
           ))}
         </main>
       ) : (
-        activeTab && <IframeView tab={activeTab} />
+        activeTab && <IframeView key={activeTab.id} tab={activeTab} />
       )}
     </div>
   );

@@ -15,6 +15,24 @@ function TabOpenIcon() {
   );
 }
 
+function NewTabIcon() {
+  return (
+    <svg
+      className="card-arrow"
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
+}
+
 function IconPlaceholder({ name }) {
   const letter = (name || '?')[0].toUpperCase();
   const colors = [
@@ -29,7 +47,7 @@ function IconPlaceholder({ name }) {
   );
 }
 
-export default function ServiceCard({ service, onOpen }) {
+export default function ServiceCard({ service, onOpen, openMode }) {
   const { name, image, status, state, url, ports, icon, description } = service;
 
   const isRunning = state === 'running';
@@ -37,7 +55,12 @@ export default function ServiceCard({ service, onOpen }) {
   const statusLabel = isRunning ? 'Running' : status;
 
   const handleClick = () => {
-    if (url) onOpen(service);
+    if (!url) return;
+    if (openMode === 'new-tab') {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      onOpen(service);
+    }
   };
 
   return (
@@ -74,7 +97,7 @@ export default function ServiceCard({ service, onOpen }) {
       {url && (
         <div className="card-footer">
           <span className="card-url">{url}</span>
-          <TabOpenIcon />
+          {openMode === 'new-tab' ? <NewTabIcon /> : <TabOpenIcon />}
         </div>
       )}
     </div>

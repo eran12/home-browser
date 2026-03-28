@@ -139,6 +139,33 @@ body {
   cursor: default;
 }
 
+.open-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-family: inherit;
+  padding: 5px 12px;
+  transition: var(--ease);
+  white-space: nowrap;
+}
+
+.open-mode-btn:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+
+.open-mode-btn.active {
+  background: rgba(124, 58, 237, 0.15);
+  border-color: rgba(124, 58, 237, 0.4);
+  color: var(--accent-light);
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -543,14 +570,44 @@ body {
   white-space: nowrap;
 }
 
-.iframe-url-display {
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  color: var(--text-dim);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.iframe-address-bar {
   flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  height: 28px;
+  padding: 0 10px;
+  outline: none;
+  transition: var(--ease);
+  min-width: 0;
+}
+
+.iframe-address-bar:focus {
+  border-color: var(--accent);
+  background: var(--card);
+}
+
+.iframe-go-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: var(--ease);
+}
+
+.iframe-go-btn:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
 }
 
 .iframe-external-btn {
