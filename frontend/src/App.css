@@ -139,6 +139,74 @@ body {
   cursor: default;
 }
 
+/* ── Filter bar ──────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-family: inherit;
+  padding: 5px 14px;
+  transition: var(--ease);
+  text-transform: capitalize;
+}
+
+.filter-btn:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+
+.filter-btn.active {
+  background: rgba(124, 58, 237, 0.15);
+  border-color: rgba(124, 58, 237, 0.5);
+  color: var(--accent-light);
+}
+
+.filter-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+}
+
+.filter-count {
+  background: rgba(255,255,255,0.07);
+  border-radius: 10px;
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  color: var(--text-dim);
+}
+
+.filter-btn.active .filter-count {
+  background: rgba(124, 58, 237, 0.2);
+  color: var(--accent-light);
+}
+
+/* ── Inactive state (non-running containers) ─────── */
+.card.inactive,
+.list-row.inactive {
+  opacity: 0.45;
+  filter: grayscale(0.4);
+}
+
+.card.inactive:hover,
+.list-row.inactive:hover {
+  opacity: 0.7;
+  filter: grayscale(0.2);
+}
+
 /* ── View toggle (header) ────────────────────────── */
 .view-toggle {
   display: flex;

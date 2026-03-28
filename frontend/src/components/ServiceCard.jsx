@@ -41,7 +41,7 @@ function CardActions({ url, onNewTab }) {
   );
 }
 
-export default function ServiceCard({ service, onOpen, viewMode }) {
+export default function ServiceCard({ service, onOpen, viewMode, inactive }) {
   const { name, image, status, state, url, ports, icon, description } = service;
 
   const isRunning = state === 'running';
@@ -57,7 +57,7 @@ export default function ServiceCard({ service, onOpen, viewMode }) {
   if (viewMode === 'list') {
     return (
       <div
-        className={`list-row ${!url ? 'no-url' : ''}`}
+        className={`list-row ${!url ? 'no-url' : ''} ${inactive ? 'inactive' : ''}`}
         onClick={handleCardClick}
         role={url ? 'button' : undefined}
       >
@@ -81,7 +81,7 @@ export default function ServiceCard({ service, onOpen, viewMode }) {
   // Grid card (default)
   return (
     <div
-      className={`card ${!url ? 'no-url' : ''}`}
+      className={`card ${!url ? 'no-url' : ''} ${inactive ? 'inactive' : ''}`}
       onClick={handleCardClick}
       role={url ? 'button' : undefined}
     >
