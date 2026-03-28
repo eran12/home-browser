@@ -56,9 +56,6 @@ app.get('/api/containers', async (_req, res) => {
 
         const url = buildUrl(container, labels);
 
-        // Skip containers with no way to access them
-        if (!url) return null;
-
         const ports = (container.Ports || [])
           .filter((p) => p.PublicPort)
           .map((p) => `${p.PublicPort}→${p.PrivatePort}`)
