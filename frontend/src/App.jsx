@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header.jsx';
+import TabBar from './components/TabBar.jsx';
 import ServiceCard from './components/ServiceCard.jsx';
+import IframeView from './components/IframeView.jsx';
 
 const REFRESH_MS = parseInt(import.meta.env.VITE_REFRESH_INTERVAL || '30', 10) * 1000;
 
@@ -9,6 +11,10 @@ export default function App() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
+
+  // Tab state
+  const [tabs, setTabs] = useState([]);
+  const [activeTabId, setActiveTabId] = useState('home');
 
   const fetchContainers = useCallback(async () => {
     setLoading(true);
@@ -35,7 +41,21 @@ export default function App() {
     return () => clearInterval(interval);
   }, [fetchContainers]);
 
-  // Group by homepage.group label, default group = null (shown as "Services")
+  const openTab = useCallback((service) => {
+    if (!service.url) return;
+    setTabs((prev) => {
+      if (prev.find((t) => t.id === service.id)) return prev;
+      return [...prev, { id: service.id, name: service.name, url: service.url, icon: service.icon }];
+    });
+    setActiveTabId(service.id);
+  }, []);
+
+  const closeTab = useCallback((id) => {
+    setTabs((prev) => prev.filter((t) => t.id !== id));
+    setActiveTabId((prev) => (prev === id ? 'home' : prev));
+  }, []);
+
+  // Group services for the dashboard view
   const groups = {};
   if (services) {
     for (const service of services) {
@@ -45,7 +65,6 @@ export default function App() {
     }
   }
 
-  // Sort: named groups first (alphabetically), then default group last
   const sortedGroupKeys = Object.keys(groups).sort((a, b) => {
     if (!a) return 1;
     if (!b) return -1;
@@ -53,6 +72,8 @@ export default function App() {
   });
 
   const totalRunning = services?.filter((s) => s.state === 'running').length ?? 0;
+  const activeTab = tabs.find((t) => t.id === activeTabId);
+  const isHome = activeTabId === 'home';
 
   return (
     <div className="app">
@@ -63,45 +84,57 @@ export default function App() {
         onRefresh={fetchContainers}
         loading={loading}
       />
-      <main className="main">
-        {error && (
-          <div className="error-banner">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            Could not reach Docker: {error}
-          </div>
-        )}
 
-        {loading && !services && (
-          <div className="loading">
-            <div className="spinner" />
-            Scanning containers...
-          </div>
-        )}
+      <TabBar
+        tabs={tabs}
+        activeTabId={activeTabId}
+        onSelect={setActiveTabId}
+        onClose={closeTab}
+      />
 
-        {services && services.length === 0 && !error && (
-          <div className="empty">
-            No accessible services found. Make sure containers have published ports or a{' '}
-            <code>homepage.url</code> label.
-          </div>
-        )}
-
-        {sortedGroupKeys.map((groupKey) => (
-          <section key={groupKey || '__default'} className="group-section">
-            <h2 className="group-title">
-              <span>{groupKey || 'Services'}</span>
-            </h2>
-            <div className="cards-grid">
-              {groups[groupKey].map((service) => (
-                <ServiceCard key={service.id} service={service} />
-              ))}
+      {isHome ? (
+        <main className="main">
+          {error && (
+            <div className="error-banner">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              Could not reach Docker: {error}
             </div>
-          </section>
-        ))}
-      </main>
+          )}
+
+          {loading && !services && (
+            <div className="loading">
+              <div className="spinner" />
+              Scanning containers...
+            </div>
+          )}
+
+          {services && services.length === 0 && !error && (
+            <div className="empty">
+              No accessible services found. Make sure containers have published ports or a{' '}
+              <code>homepage.url</code> label.
+            </div>
+          )}
+
+          {sortedGroupKeys.map((groupKey) => (
+            <section key={groupKey || '__default'} className="group-section">
+              <h2 className="group-title">
+                <span>{groupKey || 'Services'}</span>
+              </h2>
+              <div className="cards-grid">
+                {groups[groupKey].map((service) => (
+                  <ServiceCard key={service.id} service={service} onOpen={openTab} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </main>
+      ) : (
+        activeTab && <IframeView tab={activeTab} />
+      )}
     </div>
   );
 }

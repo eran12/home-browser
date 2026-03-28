@@ -1,4 +1,4 @@
-function ArrowIcon() {
+function TabOpenIcon() {
   return (
     <svg
       className="card-arrow"
@@ -9,15 +9,14 @@ function ArrowIcon() {
       stroke="currentColor"
       strokeWidth="2"
     >
-      <line x1="7" y1="17" x2="17" y2="7" />
-      <polyline points="7 7 17 7 17 17" />
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M9 3v4M15 3v4M3 9h18" />
     </svg>
   );
 }
 
 function IconPlaceholder({ name }) {
   const letter = (name || '?')[0].toUpperCase();
-  // Pick a color from a set based on the letter
   const colors = [
     '#7c3aed', '#2563eb', '#0891b2', '#059669',
     '#ca8a04', '#dc2626', '#db2777', '#9333ea',
@@ -30,20 +29,23 @@ function IconPlaceholder({ name }) {
   );
 }
 
-export default function ServiceCard({ service }) {
+export default function ServiceCard({ service, onOpen }) {
   const { name, image, status, state, url, ports, icon, description } = service;
 
   const isRunning = state === 'running';
   const statusClass = isRunning ? 'status-running' : 'status-other';
   const statusLabel = isRunning ? 'Running' : status;
 
-  const Wrapper = url ? 'a' : 'div';
-  const wrapperProps = url
-    ? { href: url, target: '_blank', rel: 'noopener noreferrer', className: 'card' }
-    : { className: 'card no-url' };
+  const handleClick = () => {
+    if (url) onOpen(service);
+  };
 
   return (
-    <Wrapper {...wrapperProps}>
+    <div
+      className={`card ${!url ? 'no-url' : ''}`}
+      onClick={handleClick}
+      role={url ? 'button' : undefined}
+    >
       <div className="card-header">
         <div className="card-icon-wrapper">
           {icon ? (
@@ -72,9 +74,9 @@ export default function ServiceCard({ service }) {
       {url && (
         <div className="card-footer">
           <span className="card-url">{url}</span>
-          <ArrowIcon />
+          <TabOpenIcon />
         </div>
       )}
-    </Wrapper>
+    </div>
   );
 }
