@@ -139,30 +139,137 @@ body {
   cursor: default;
 }
 
-.open-mode-btn {
+/* ── View toggle (header) ────────────────────────── */
+.view-toggle {
   display: flex;
-  align-items: center;
-  gap: 6px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 8px;
-  color: var(--text-muted);
+  overflow: hidden;
+}
+
+.view-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 28px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
   cursor: pointer;
-  font-size: 0.8rem;
-  font-family: inherit;
-  padding: 5px 12px;
   transition: var(--ease);
-  white-space: nowrap;
 }
 
-.open-mode-btn:hover {
+.view-toggle-btn:hover {
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.04);
+}
+
+.view-toggle-btn.active {
+  background: rgba(124, 58, 237, 0.2);
+  color: var(--accent-light);
+}
+
+/* ── List view ───────────────────────────────────── */
+.cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: var(--ease);
+  min-width: 0;
+}
+
+.list-row:not(.no-url) {
+  cursor: pointer;
+}
+
+.list-row:not(.no-url):hover {
+  background: var(--card-hover);
   border-color: var(--border-hover);
-  color: var(--text);
 }
 
-.open-mode-btn.active {
-  background: rgba(124, 58, 237, 0.15);
-  border-color: rgba(124, 58, 237, 0.4);
+.list-row.no-url {
+  opacity: 0.55;
+}
+
+.list-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.list-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+  width: 160px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list-image {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list-ports {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.list-url {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  width: 200px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Per-card action buttons in footer */
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.card-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  color: var(--text-dim);
+  transition: var(--ease);
+  cursor: pointer;
+}
+
+.card-action-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
   color: var(--accent-light);
 }
 
