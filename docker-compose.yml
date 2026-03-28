@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  home-browser:
+    build: .
+    container_name: home-browser
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8888}:3000"
+    volumes:
+      # Read-only access to Docker socket for container discovery
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      # Set to your server's IP or hostname so port links work from your browser
+      # Example: SERVER_HOST=192.168.1.10  or  SERVER_HOST=myserver.local
+      - SERVER_HOST=${SERVER_HOST:-localhost}
+      # How often the UI auto-refreshes (seconds)
+      - REFRESH_INTERVAL=${REFRESH_INTERVAL:-30}
