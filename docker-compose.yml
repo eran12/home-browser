@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   home-browser:
-    build: .
+    image: ${IMAGE:-eranei/home-browser:latest}
     container_name: home-browser
     restart: unless-stopped
     ports:
