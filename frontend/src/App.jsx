@@ -62,33 +62,14 @@ export default function App() {
     setActiveTabId((prev) => (prev === id ? 'home' : prev));
   }, []);
 
-  // Filter + group services for the dashboard view
-  const filteredServices = services?.filter((s) => {
-    if (filter === 'active') return s.state === 'running';
-    if (filter === 'inactive') return s.state !== 'running';
-    return true;
-  }) ?? [];
+  // Split into accessible (has URL) and no-url groups
+  const allServices = services ?? [];
+  const accessible = allServices.filter((s) => s.url).sort((a, b) => a.name.localeCompare(b.name));
+  const noUrl     = allServices.filter((s) => !s.url).sort((a, b) => a.name.localeCompare(b.name));
 
-  const groups = {};
-  for (const service of filteredServices) {
-    const key = service.group || '';
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(service);
-  }
-  // Within each group: running first, then stopped (alphabetical within each tier)
-  for (const key of Object.keys(groups)) {
-    groups[key].sort((a, b) => {
-      const aRun = a.state === 'running' ? 0 : 1;
-      const bRun = b.state === 'running' ? 0 : 1;
-      return aRun - bRun || a.name.localeCompare(b.name);
-    });
-  }
-
-  const sortedGroupKeys = Object.keys(groups).sort((a, b) => {
-    if (!a) return 1;
-    if (!b) return -1;
-    return a.localeCompare(b);
-  });
+  // Apply filter
+  const showAccessible = filter === 'all' || filter === 'accessible';
+  const showNoUrl      = filter === 'all' || filter === 'no-url';
 
   const totalRunning = services?.filter((s) => s.state === 'running').length ?? 0;
   const activeTab = tabs.find((t) => t.id === activeTabId);
@@ -135,41 +116,45 @@ export default function App() {
 
           {services && (
             <div className="filter-bar">
-              {['all', 'active', 'inactive'].map((f) => (
+              {[
+                { key: 'all',        label: 'All',        count: allServices.length },
+                { key: 'accessible', label: 'Accessible', count: accessible.length, dot: true },
+                { key: 'no-url',     label: 'No URL',     count: noUrl.length },
+              ].map(({ key, label, count, dot }) => (
                 <button
-                  key={f}
-                  className={`filter-btn ${filter === f ? 'active' : ''}`}
-                  onClick={() => setFilter(f)}
+                  key={key}
+                  className={`filter-btn ${filter === key ? 'active' : ''}`}
+                  onClick={() => setFilter(key)}
                 >
-                  {f === 'all' && 'All'}
-                  {f === 'active' && <><span className="filter-dot" />Active</>}
-                  {f === 'inactive' && 'Inactive'}
-                  <span className="filter-count">
-                    {f === 'all' && services.length}
-                    {f === 'active' && services.filter(s => s.state === 'running').length}
-                    {f === 'inactive' && services.filter(s => s.state !== 'running').length}
-                  </span>
+                  {dot && <span className="filter-dot" />}
+                  {label}
+                  <span className="filter-count">{count}</span>
                 </button>
               ))}
             </div>
           )}
 
-          {filteredServices.length === 0 && services && !error && (
-            <div className="empty">No {filter !== 'all' ? filter : ''} services found.</div>
-          )}
-
-          {sortedGroupKeys.map((groupKey) => (
-            <section key={groupKey || '__default'} className="group-section">
-              <h2 className="group-title">
-                <span>{groupKey || 'Services'}</span>
-              </h2>
+          {showAccessible && accessible.length > 0 && (
+            <section className="group-section">
+              <h2 className="group-title"><span>Accessible</span></h2>
               <div className={viewMode === 'list' ? 'cards-list' : 'cards-grid'}>
-                {groups[groupKey].map((service) => (
-                  <ServiceCard key={service.id} service={service} onOpen={openTab} viewMode={viewMode} inactive={service.state !== 'running'} />
+                {accessible.map((service) => (
+                  <ServiceCard key={service.id} service={service} onOpen={openTab} viewMode={viewMode} />
                 ))}
               </div>
             </section>
-          ))}
+          )}
+
+          {showNoUrl && noUrl.length > 0 && (
+            <section className="group-section">
+              <h2 className="group-title"><span>No URL — add a <code>homepage.url</code> label to access</span></h2>
+              <div className={viewMode === 'list' ? 'cards-list' : 'cards-grid'}>
+                {noUrl.map((service) => (
+                  <ServiceCard key={service.id} service={service} onOpen={openTab} viewMode={viewMode} />
+                ))}
+              </div>
+            </section>
+          )}
         </main>
       ) : (
         activeTab && <IframeView key={activeTab.id} tab={activeTab} />

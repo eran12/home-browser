@@ -21,7 +21,7 @@ function IconPlaceholder({ name, small }) {
   );
 }
 
-function CardActions({ url, onNewTab }) {
+function CardActions({ onNewTab }) {
   return (
     <div className="card-actions">
       <span className="card-action-btn" title="Open in dashboard tab">
@@ -41,12 +41,26 @@ function CardActions({ url, onNewTab }) {
   );
 }
 
-export default function ServiceCard({ service, onOpen, viewMode, inactive }) {
+function NoUrlTag() {
+  return (
+    <span className="no-url-tag" title="Add a homepage.url label to make this service accessible">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      No URL
+    </span>
+  );
+}
+
+export default function ServiceCard({ service, onOpen, viewMode }) {
   const { name, image, status, state, url, ports, icon, description } = service;
 
   const isRunning = state === 'running';
   const statusClass = isRunning ? 'status-running' : 'status-other';
   const statusLabel = isRunning ? 'Running' : status;
+  const noUrl = !url;
 
   const handleCardClick = () => { if (url) onOpen(service); };
   const handleNewTab = (e) => {
@@ -57,7 +71,7 @@ export default function ServiceCard({ service, onOpen, viewMode, inactive }) {
   if (viewMode === 'list') {
     return (
       <div
-        className={`list-row ${!url ? 'no-url' : ''} ${inactive ? 'inactive' : ''}`}
+        className={`list-row ${noUrl ? 'no-url' : ''}`}
         onClick={handleCardClick}
         role={url ? 'button' : undefined}
       >
@@ -72,16 +86,18 @@ export default function ServiceCard({ service, onOpen, viewMode, inactive }) {
         <div className="list-ports">
           {ports.map((p) => <span key={p} className="port-tag">{p}</span>)}
         </div>
-        <span className="list-url">{url || '—'}</span>
-        {url && <CardActions url={url} onNewTab={handleNewTab} />}
+        {noUrl
+          ? <NoUrlTag />
+          : <span className="list-url">{url}</span>}
+        {url && <CardActions onNewTab={handleNewTab} />}
       </div>
     );
   }
 
-  // Grid card (default)
+  // Grid card
   return (
     <div
-      className={`card ${!url ? 'no-url' : ''} ${inactive ? 'inactive' : ''}`}
+      className={`card ${noUrl ? 'no-url' : ''}`}
       onClick={handleCardClick}
       role={url ? 'button' : undefined}
     >
@@ -106,12 +122,12 @@ export default function ServiceCard({ service, onOpen, viewMode, inactive }) {
         </div>
       )}
 
-      {url && (
-        <div className="card-footer">
-          <span className="card-url">{url}</span>
-          <CardActions url={url} onNewTab={handleNewTab} />
-        </div>
-      )}
+      <div className="card-footer">
+        {noUrl
+          ? <NoUrlTag />
+          : <span className="card-url">{url}</span>}
+        {url && <CardActions onNewTab={handleNewTab} />}
+      </div>
     </div>
   );
 }
