@@ -37,17 +37,74 @@ function cleanImageName(image) {
   return image;
 }
 
-// Headers that block iframe embedding — strip these when proxying
+// Headers that block iframe embedding or cause decode issues — strip when proxying
 const STRIP_HEADERS = new Set([
   'x-frame-options',
   'content-security-policy',
   'x-xss-protection',
   'strict-transport-security',
-  'content-encoding',  // Node fetch decompresses automatically; don't tell browser it's still compressed
-  'content-length',    // length changes after decompression + base tag injection
-  'transfer-encoding', // express handles this itself
+  'content-encoding',  // Node fetch auto-decompresses; don't tell browser it's still encoded
+  'content-length',    // changes after decompression + URL rewriting
+  'transfer-encoding',
   'connection',
 ]);
+
+// Resolve a URL found in the proxied page and wrap it so it goes through our proxy.
+// Handles absolute, root-relative, and path-relative URLs.
+function toProxyHref(href, base) {
+  if (!href) return href;
+  const trimmed = href.trim();
+  if (/^(#|javascript:|data:|blob:|mailto:|tel:)/.test(trimmed)) return trimmed;
+  try {
+    const abs = new URL(trimmed, base).toString();
+    return `/api/proxy?url=${encodeURIComponent(abs)}`;
+  } catch { return trimmed; }
+}
+
+// Rewrite all resource URLs in an HTML document so every asset (scripts,
+// stylesheets, images, fonts, form actions) loads through /api/proxy.
+// Also inject a tiny fetch/XHR shim so JS-initiated API calls from the
+// page's own scripts are also routed through the proxy.
+function rewriteHtml(html, targetUrl) {
+  const base = new URL(targetUrl);
+  const p = (href) => toProxyHref(href, base);
+
+  // Rewrite HTML attribute URLs (src, href, action) — double and single quotes
+  html = html
+    .replace(/((?:src|href|action)\s*=\s*")([^"#][^"]*?)(")/gi, (_, pre, val, post) => `${pre}${p(val)}${post}`)
+    .replace(/((?:src|href|action)\s*=\s*')([^'#][^']*?)(')/gi, (_, pre, val, post) => `${pre}${p(val)}${post}`)
+    // CSS url() in inline styles and <style> blocks
+    .replace(/url\(\s*["']?([^"')]+?)["']?\s*\)/g, (_, u) => `url("${p(u)}")`);
+
+  // JS shim: intercepts fetch() and XMLHttpRequest from the proxied page so
+  // same-origin API calls (e.g. /api/states) are routed through our proxy.
+  const origin = JSON.stringify(base.origin);
+  const shim = `<script>(function(){` +
+    `var _o=${origin};` +
+    `function _p(u){` +
+      `if(!u||typeof u!=="string")return u;` +
+      `if(/^(#|data:|blob:|javascript:)/.test(u))return u;` +
+      `try{var a=new URL(u,_o).href;` +
+        `if(a.startsWith(_o))return"/api/proxy?url="+encodeURIComponent(a);}` +
+      `catch(e){}return u;}` +
+    // Shim fetch
+    `var _f=window.fetch;` +
+    `window.fetch=function(i,o){return _f.call(this,typeof i==="string"?_p(i):i,o);};` +
+    // Shim XHR
+    `var _x=XMLHttpRequest.prototype.open;` +
+    `XMLHttpRequest.prototype.open=function(){` +
+      `arguments[1]=_p(arguments[1]);return _x.apply(this,arguments);};` +
+  `})();</script>`;
+
+  // Inject shim as early as possible so it runs before the page's own scripts
+  if (/<head[^>]*>/i.test(html)) {
+    html = html.replace(/<head[^>]*>/i, (m) => `${m}\n${shim}`);
+  } else {
+    html = shim + html;
+  }
+
+  return html;
+}
 
 app.get('/api/proxy', async (req, res) => {
   const targetUrl = req.query.url;
@@ -65,44 +122,40 @@ app.get('/api/proxy', async (req, res) => {
     const response = await fetch(url.toString(), {
       headers: {
         'User-Agent': 'Mozilla/5.0 (HomeBrowser proxy)',
-        'Accept': req.headers['accept'] || 'text/html,*/*',
+        'Accept': req.headers['accept'] || 'text/html,application/xhtml+xml,*/*',
         'Accept-Language': req.headers['accept-language'] || 'en',
         'Cookie': req.headers['cookie'] || '',
       },
       redirect: 'follow',
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(15000),
     });
 
-    // Forward status
     res.status(response.status);
 
-    // Forward headers, stripping the ones that block embedding
+    // Forward headers minus the ones that break embedding or decoding
     for (const [key, value] of response.headers.entries()) {
       if (!STRIP_HEADERS.has(key.toLowerCase())) {
         res.setHeader(key, value);
       }
     }
+    // Allow the dashboard to load this as a same-origin resource
+    res.setHeader('Access-Control-Allow-Origin', '*');
 
     const contentType = response.headers.get('content-type') || '';
 
     if (contentType.includes('text/html')) {
-      let html = await response.text();
-      // Inject a <base> tag so relative URLs (CSS, JS, images) still load
-      // directly from the service. This makes simple pages work out of the box.
-      // JS-heavy SPAs may not function fully since their JS API calls are
-      // same-origin relative and will target the dashboard, not the service.
-      const origin = url.origin;
-      const basePath = url.pathname.endsWith('/') ? url.pathname : url.pathname.replace(/\/[^/]*$/, '/');
-      const baseTag = `<base href="${origin}${basePath}">`;
-      if (/<head[^>]*>/i.test(html)) {
-        html = html.replace(/<head[^>]*>/i, (m) => `${m}\n  ${baseTag}`);
-      } else {
-        html = baseTag + html;
-      }
+      const html = rewriteHtml(await response.text(), url.toString());
       res.setHeader('content-type', 'text/html; charset=utf-8');
       res.send(html);
+    } else if (contentType.includes('text/css')) {
+      // Also rewrite url() references inside CSS files
+      let css = await response.text();
+      css = css.replace(/url\(\s*["']?([^"')]+?)["']?\s*\)/g,
+        (_, u) => `url("${toProxyHref(u, url.toString())}")`);
+      res.setHeader('content-type', 'text/css');
+      res.send(css);
     } else {
-      // Stream binary / non-HTML content through unchanged
+      // Stream everything else (JS, images, fonts, JSON) unchanged
       const { Readable } = require('stream');
       Readable.fromWeb(response.body).pipe(res);
     }
