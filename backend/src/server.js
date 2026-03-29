@@ -43,6 +43,8 @@ const STRIP_HEADERS = new Set([
   'content-security-policy',
   'x-xss-protection',
   'strict-transport-security',
+  'content-encoding',  // Node fetch decompresses automatically; don't tell browser it's still compressed
+  'content-length',    // length changes after decompression + base tag injection
   'transfer-encoding', // express handles this itself
   'connection',
 ]);
