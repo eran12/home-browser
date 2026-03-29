@@ -2,6 +2,23 @@ const express = require('express');
 const Docker = require('dockerode');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
+
+const DATA_DIR = process.env.DATA_DIR || '/data';
+const LINKS_FILE = path.join(DATA_DIR, 'links.json');
+
+function readLinks() {
+  try {
+    return JSON.parse(fs.readFileSync(LINKS_FILE, 'utf8'));
+  } catch {
+    return [];
+  }
+}
+
+function writeLinks(links) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(LINKS_FILE, JSON.stringify(links, null, 2));
+}
 
 const app = express();
 const docker = new Docker({ socketPath: process.env.DOCKER_SOCKET || '/var/run/docker.sock' });
@@ -166,6 +183,52 @@ app.get('/api/proxy', async (req, res) => {
 });
 
 app.get('/api/health', (_req, res) => {
+  res.json({ ok: true });
+});
+
+// ── Custom links CRUD ────────────────────────────────────────────────────────
+
+app.get('/api/links', (_req, res) => {
+  res.json(readLinks());
+});
+
+app.post('/api/links', (req, res) => {
+  const { name, url, icon, description } = req.body;
+  if (!name || !url) return res.status(400).json({ error: 'name and url are required' });
+  const links = readLinks();
+  const link = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+    name,
+    url,
+    icon: icon || null,
+    description: description || null,
+  };
+  links.push(link);
+  writeLinks(links);
+  res.status(201).json(link);
+});
+
+app.put('/api/links/:id', (req, res) => {
+  const links = readLinks();
+  const idx = links.findIndex((l) => l.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  const { name, url, icon, description } = req.body;
+  links[idx] = {
+    ...links[idx],
+    ...(name !== undefined && { name }),
+    ...(url !== undefined && { url }),
+    ...(icon !== undefined && { icon: icon || null }),
+    ...(description !== undefined && { description: description || null }),
+  };
+  writeLinks(links);
+  res.json(links[idx]);
+});
+
+app.delete('/api/links/:id', (req, res) => {
+  const links = readLinks();
+  const filtered = links.filter((l) => l.id !== req.params.id);
+  if (filtered.length === links.length) return res.status(404).json({ error: 'Not found' });
+  writeLinks(filtered);
   res.json({ ok: true });
 });
 

@@ -10,6 +10,8 @@ services:
     volumes:
       # Read-only access to Docker socket for container discovery
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Persistent storage for custom links
+      - ${DATA_DIR:-./data}:/data
     environment:
       # Set to your server's IP or hostname so port links work from your browser
       # Example: SERVER_HOST=192.168.1.10  or  SERVER_HOST=myserver.local

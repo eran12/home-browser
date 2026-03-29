@@ -3,6 +3,7 @@ import Header from './components/Header.jsx';
 import TabBar from './components/TabBar.jsx';
 import ServiceCard from './components/ServiceCard.jsx';
 import IframeView from './components/IframeView.jsx';
+import LinkModal from './components/LinkModal.jsx';
 
 const REFRESH_MS = parseInt(import.meta.env.VITE_REFRESH_INTERVAL || '30', 10) * 1000;
 
@@ -21,6 +22,10 @@ export default function App() {
 
   // Filter: 'all' | 'active' | 'inactive'
   const [filter, setFilter] = useState('all');
+
+  // Custom links
+  const [customLinks, setCustomLinks] = useState([]);
+  const [editingLink, setEditingLink] = useState(null); // null=closed, {}=new, {id,...}=edit
 
 
   const fetchContainers = useCallback(async () => {
@@ -47,6 +52,32 @@ export default function App() {
     const interval = setInterval(fetchContainers, REFRESH_MS);
     return () => clearInterval(interval);
   }, [fetchContainers]);
+
+  const fetchLinks = useCallback(async () => {
+    try {
+      const res = await fetch('/api/links');
+      if (res.ok) setCustomLinks(await res.json());
+    } catch {}
+  }, []);
+
+  useEffect(() => { fetchLinks(); }, [fetchLinks]);
+
+  const handleSaveLink = useCallback(async (data) => {
+    const isEdit = !!data.id;
+    await fetch(isEdit ? `/api/links/${data.id}` : '/api/links', {
+      method: isEdit ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    fetchLinks();
+    setEditingLink(null);
+  }, [fetchLinks]);
+
+  const handleDeleteLink = useCallback(async (id) => {
+    if (!window.confirm('Delete this custom link?')) return;
+    await fetch(`/api/links/${id}`, { method: 'DELETE' });
+    fetchLinks();
+  }, [fetchLinks]);
 
   const openTab = useCallback((service) => {
     if (!service.url) return;
@@ -77,6 +108,14 @@ export default function App() {
 
   return (
     <div className="app">
+      {editingLink !== null && (
+        <LinkModal
+          link={editingLink.id ? editingLink : null}
+          onSave={handleSaveLink}
+          onClose={() => setEditingLink(null)}
+        />
+      )}
+
       <Header
         totalServices={services?.length ?? 0}
         totalRunning={totalRunning}
@@ -155,6 +194,42 @@ export default function App() {
               </div>
             </section>
           )}
+
+          <section className="group-section">
+            <h2 className="group-title">
+              <span>Custom Links</span>
+              <button className="add-link-btn" onClick={() => setEditingLink({})}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add
+              </button>
+            </h2>
+            {customLinks.length === 0 ? (
+              <button className="add-link-cta" onClick={() => setEditingLink({})}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add your first custom link
+              </button>
+            ) : (
+              <div className={viewMode === 'list' ? 'cards-list' : 'cards-grid'}>
+                {customLinks.map((link) => (
+                  <ServiceCard
+                    key={link.id}
+                    service={{ ...link, state: 'running', status: 'custom', ports: [] }}
+                    onOpen={openTab}
+                    viewMode={viewMode}
+                    isCustom
+                    onEdit={() => setEditingLink(link)}
+                    onDelete={() => handleDeleteLink(link.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
         </main>
       ) : (
         activeTab && <IframeView key={activeTab.id} tab={activeTab} />
