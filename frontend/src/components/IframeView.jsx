@@ -3,15 +3,27 @@ import { useState, useRef } from 'react';
 export default function IframeView({ tab }) {
   const [addressUrl, setAddressUrl] = useState(tab.url);
   const [iframeSrc, setIframeSrc]   = useState(tab.url);
+  const [useProxy, setUseProxy]     = useState(false);
   const [status, setStatus]         = useState('loading'); // 'loading' | 'loaded' | 'blocked'
   const iframeRef = useRef(null);
 
-  const navigate = () => {
-    const raw = addressUrl.trim();
+  const effectiveSrc = useProxy
+    ? `/api/proxy?url=${encodeURIComponent(iframeSrc)}`
+    : iframeSrc;
+
+  const navigate = (rawUrl) => {
+    const raw = (rawUrl ?? addressUrl).trim();
     if (!raw) return;
     const url = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`;
     setAddressUrl(url);
     setIframeSrc(url);
+    setStatus('loading');
+    // Reset proxy when navigating to a new URL
+    setUseProxy(false);
+  };
+
+  const activateProxy = () => {
+    setUseProxy(true);
     setStatus('loading');
   };
 
@@ -22,19 +34,15 @@ export default function IframeView({ tab }) {
 
   const handleLoad = () => {
     try {
-      // Accessing contentDocument throws SecurityError when X-Frame-Options
-      // or CSP blocks the frame — we use this to detect silent blocks.
       const doc = iframeRef.current?.contentDocument;
       if (!doc || doc.location.href === 'about:blank') {
-        // Frame loaded but is blank — likely blocked without a network error
-        // (some services do this silently). Only flag if the src isn't blank.
         if (iframeSrc !== 'about:blank') setStatus('blocked');
         else setStatus('loaded');
       } else {
         setStatus('loaded');
       }
     } catch {
-      // SecurityError = frame was blocked
+      // SecurityError — frame was blocked (X-Frame-Options / CSP)
       setStatus('blocked');
     }
   };
@@ -55,11 +63,16 @@ export default function IframeView({ tab }) {
           spellCheck={false}
           aria-label="URL"
         />
-        <button className="iframe-go-btn" onClick={navigate} title="Navigate">
+        <button className="iframe-go-btn" onClick={() => navigate()} title="Navigate">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <polyline points="9 18 15 12 9 6" />
           </svg>
         </button>
+        {useProxy && (
+          <span className="proxy-badge" title="Page is loaded through the home-browser proxy. JS-heavy apps may not work fully.">
+            via proxy
+          </span>
+        )}
         <a
           href={iframeSrc}
           target="_blank"
@@ -90,31 +103,44 @@ export default function IframeView({ tab }) {
               <circle cx="12" cy="12" r="10" />
               <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
             </svg>
-            <p className="iframe-error-title">Can't embed this service</p>
+            <p className="iframe-error-title">Blocked by {tab.name}</p>
             <p className="iframe-error-desc">
-              This service blocks iframe embedding via <code>X-Frame-Options</code> or <code>Content-Security-Policy</code>,
-              or the URL isn't reachable from your browser (mixed HTTP/HTTPS, wrong IP).
+              This service uses <code>X-Frame-Options</code> to prevent direct embedding.
+              The proxy fetches the page server-side and strips that header — it works well
+              for simple pages. JS-heavy apps (Home Assistant, Portainer) may load the shell
+              but API calls won't function fully.
             </p>
-            <a
-              href={iframeSrc}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="iframe-open-external-large"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                <polyline points="15 3 21 3 21 9" />
-                <line x1="10" y1="14" x2="21" y2="3" />
-              </svg>
-              Open {tab.name} in new tab
-            </a>
+            <div className="iframe-error-actions">
+              <button className="iframe-proxy-btn" onClick={activateProxy}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="17 1 21 5 17 9" />
+                  <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                  <polyline points="7 23 3 19 7 15" />
+                  <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                </svg>
+                Try via proxy
+              </button>
+              <a
+                href={iframeSrc}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="iframe-open-external-large"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+                Open in new tab
+              </a>
+            </div>
           </div>
         )}
 
         <iframe
           ref={iframeRef}
-          key={iframeSrc}
-          src={iframeSrc}
+          key={effectiveSrc}
+          src={effectiveSrc}
           title={tab.name}
           className="service-iframe"
           allow="fullscreen"

@@ -880,6 +880,47 @@ body {
   border-radius: 3px;
 }
 
+.iframe-error-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.iframe-proxy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--border-hover);
+  color: var(--text);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: var(--ease);
+}
+
+.iframe-proxy-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-light);
+}
+
+.proxy-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  color: var(--accent-light);
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .iframe-open-external-large {
   display: inline-flex;
   align-items: center;
